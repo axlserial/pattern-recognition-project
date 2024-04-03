@@ -100,6 +100,15 @@ dataset_norm <- dataset
 dataset_norm[, continuous_columns] <- lapply(dataset[, continuous_columns], 
 	function(x) (x - mean(x)) / sd(x))
 
+# --/ Mostrar media y desviación estándar después de la normalización
+mean_values_norm <- sapply(dataset_norm[, continuous_columns], mean)
+sd_values_norm <- sapply(dataset_norm[, continuous_columns], sd)
+
+for (feature in continuous_columns) {
+	col_name <- colnames(dataset_norm)[feature]
+	cat("Feature: ", col_name, "\tMean: ", mean_values_norm[col_name], "\tSD: ", sd_values_norm[col_name], "\n")
+}
+
 # --/ Eliminación de valores extremos por medio de la media y la varianza
 
 # --/--/ Se eliminan filas que tengan al menos 
