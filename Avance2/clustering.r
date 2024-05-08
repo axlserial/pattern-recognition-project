@@ -106,6 +106,7 @@ dataset_normDF <- dataset_normDF[apply(dataset_normDF, 1,
 cat("Cantidad de filas eliminadas por valores extremos: ", 
     nrow(dataset_numeric) - nrow(dataset_normDF), "\n")
 
+dataset_normDF <- as.data.frame(dataset_normDF)
 # ---------------------------------------------------------------------
 # 2. Agrupamiento de datos con K-means y Fuzzy K-means
 
