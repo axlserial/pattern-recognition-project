@@ -76,6 +76,7 @@ dataset_numeric <- categorical_to_numeric(dataset, categorical_columns)
 dataset_numeric <- as.data.frame(lapply(dataset_numeric, as.numeric))
 View(dataset_numeric, title = "Dataset con todos los datos numericos")
 
+
 # --/ Normalizamos los datos
 dataset_norm <- dataset_numeric
 
@@ -106,7 +107,7 @@ dataset_normDF <- dataset_normDF[apply(dataset_normDF, 1,
 cat("Cantidad de filas eliminadas por valores extremos: ", 
     nrow(dataset_numeric) - nrow(dataset_normDF), "\n")
 
-dataset_normDF <- as.data.frame(dataset_normDF)
+#dataset_normDF <- as.data.frame(dataset_normDF)
 # ---------------------------------------------------------------------
 # 2. Agrupamiento de datos con K-means y Fuzzy K-means
 
@@ -118,8 +119,8 @@ k <- 2:10
 scoresKmenas <- sapply(k, function(x) silhouette_score(x, data=dataset_normDF, features=features_names))
 
 # --/--/ Guardar el score de la silueta en un dataframe
-silhouette_scoresKmenas <- data.frame(k=k, scores=scoresKmenas)
-View(silhouette_scoresKmenas, title = "Score de la silueta para K-means")
+# silhouette_scoresKmenas <- data.frame(k=k, scores=scoresKmenas)
+# View(silhouette_scoresKmenas, title = "Score de la silueta para K-means")
 
 # --/--/ Graficar el score de la silueta
 plot_silhouette_score(k, scoresKmenas, "Score de la silueta para K-means")
@@ -131,21 +132,31 @@ b <- 1.5
 scoresFuzzyKmenas <- sapply(k, function(x) silhouette_score_fuzzy(x, data=dataset_normDF, features=features_names, b=b))
 
 # --/--/ Guardar el score de la silueta en un dataframe
-silhouette_scoresFuzzyKmenas <- data.frame(k=k, scores=scoresFuzzyKmenas)
-View(silhouette_scoresFuzzyKmenas, title = "Score de la silueta para Fuzzy K-means")
+# silhouette_scoresFuzzyKmenas <- data.frame(k=k, scores=scoresFuzzyKmenas)
+# View(silhouette_scoresFuzzyKmenas, title = "Score de la silueta para Fuzzy K-means")
 
 # --/--/ Graficar el score de la silueta 
 plot_silhouette_score(k, scoresFuzzyKmenas, "Score de la silueta para Fuzzy K-means")
 
 # ---------------------------------------------------------------------
-# 3. Selección de características por el método de envolvente
-idx_features <- seq(from=1, to=16)
+# Selección de características
+
+# Eliminamos las características binarias
+binary_colums <- c(1,5,6,10,12)
+individual_data <- dataset_df[-binary_colums]
+
+
+idx_features <- seq(from=1, to=11)
+featuresAll <- names(individual_data)
+
+
 k_i <- 2
-
-
 
 features_selected <- c()
 avg_sil_selected <- c()
 
-avg_sil <- sapply(idx_features, function(x) 
-	silhouette_score(k_i, data = dataset_normDF, features = features_names[x]))
+# avg_sil <- sapply(idx_features, function(x) 
+# 	silhouette_score(k_i, data = individual_data, features = featuresAll[x]))
+
+avg_sil <- sapply(featuresAll, function(x) 
+	silhouette_score(k_i, data = individual_data, features = featuresAll[x]))
