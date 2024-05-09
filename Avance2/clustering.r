@@ -1,31 +1,14 @@
 library(here)
-library(DescTools)
 library(ggplot2)
-library(e1071)
-library(corrplot)
 library(cluster)
-library(factoextra)
-
-# Semilla
-set.seed(0)
-
-# Funcion para convertir datos categoricos a numericos
-categorical_to_numeric <- function(dataset, categorical_columns) {
-    for (i in 1:length(categorical_columns)) {
-        uniqueValues <- unique(dataset[,categorical_columns[i]])
-        dataset[, categorical_columns[i]] <- sapply(dataset[, categorical_columns[i]], 
-                                                function(x) match(x, uniqueValues) - 1)
-    }
-    return(dataset)
-}
+library(e1071)
 
 # Funcion para calcular el coeficiente de silueta para un modelo de k-means
 silhouette_score <- function(k, data, features) {
-  kmeans_model <- kmeans(data[, features], centers = k, nstart = 25)
-  #kmeans_model <- cmeans(data[, features], centers = k, m=2.5)
-  silhouette_score <- silhouette(kmeans_model$cluster, dist(data[, features]))
+  	kmeans_model <- kmeans(data[, features], centers = k, nstart = 25)
+  	silhouette_score <- silhouette(kmeans_model$cluster, dist(data[, features]))
   
-  return (mean(silhouette_score[, 3]))
+	return (mean(silhouette_score[, 3]))
 }
 
 # Funcion para calcular el coeficiente de silueta para un modelo de Fuzzy k-means
@@ -36,22 +19,89 @@ silhouette_score_fuzzy <- function(k, data, features, b) {
     return (mean(silhouette_score[, 3]))
 }
 
+# Funcion para encontrar la mejor caracteristica para un modelo de k-means
+best_kmeans <- function(k, data, features, selected_features=c()) {
+	actual_scores <- sapply(features, function(f) 
+		silhouette_score(k, data, c(selected_features, f)))
+	best_feature <- which.max(actual_scores)
+
+	return (list(feature=best_feature, score=actual_scores[best_feature]))
+}
+
+# Funcion para encontrar la mejor caracteristica para un modelo de Fuzzy k-means
+best_fkmeans <- function(k, data, features, selected_features=c()) {
+	actual_scores <- sapply(features, function(f) 
+		silhouette_score_fuzzy(k, data, c(selected_features, f), b))
+	best_feature <- which.max(actual_scores)
+
+	return (list(feature=best_feature, score=actual_scores[best_feature]))
+}
+
+# --/ Funcion para encontrar el mejor subconjunto de caracteristicas por cada valor de K
+#     utilizando el metodo envolvente (K-means)
+best_kfeatures <- function(k, data, features) {
+	selected_features <- c()
+	selected_avg_score <- c()
+	
+	# Se obtiene la 1ra caracteristica
+	actual_features <- features
+	best <- best_kmeans(k, data, actual_features)
+	selected_features <- c(selected_features, actual_features[best$feature])
+	selected_avg_score <- c(selected_avg_score, best$score)
+
+	# Se obtienen las demas caracteristicas
+	for (i in 2:length(features)) {
+		actual_features <- features[!features %in% selected_features]
+		best <- best_kmeans(k, data, actual_features, selected_features)
+		selected_features <- c(selected_features, actual_features[best$feature])
+		selected_avg_score <- c(selected_avg_score, best$score)
+	}
+
+	return (list(features=selected_features, score=selected_avg_score))
+}
+
+# --/ Funcion para encontrar el mejor subconjunto de caracteristicas por cada valor de K
+#     utilizando el metodo envolvente (Fuzzy k-means)
+best_fkfeatures <- function(k, data, features) {
+	selected_features <- c()
+	selected_avg_score <- c()
+	
+	# Se obtiene la 1ra caracteristica
+	actual_features <- features
+	best <- best_fkmeans(k, data, actual_features)
+	selected_features <- c(selected_features, actual_features[best$feature])
+	selected_avg_score <- c(selected_avg_score, best$score)
+
+	# Se obtienen las demas caracteristicas
+	for (i in 2:length(features)) {
+		actual_features <- features[!features %in% selected_features]
+		best <- best_fkmeans(k, data, actual_features, selected_features)
+		selected_features <- c(selected_features, actual_features[best$feature])
+		selected_avg_score <- c(selected_avg_score, best$score)
+	}
+
+	return (list(features=selected_features, score=selected_avg_score))
+}
+
 # Graficar el score de la silueta
 plot_silhouette_score <- function(k, scores, title) {
-  x11()
-  plot(k, type = "b", scores, xlab = "Número de clusters", 
-       ylab = "Score de la silueta", frame=FALSE, main=title, 
-       col="#33608C")
-  #abline(v=k[which.max(scores)], col="#9A68A4", lty=2)
+	x11()
+	plot(k, type = "b", scores, xlab = "Número de clusters", 
+    	ylab = "Score de la silueta", frame=FALSE, main=title, 
+    	col="#33608C")
 }
 
 # ---------------------------------------------------------------------
+
+# Semilla
+set.seed(0)
 
 # Ruta al dataset, Estimation of Obesity Levels Based On Eating Habits and Physical Condition
 dataset_path <- here("Datasets", "Avance1_B.csv")
 
 # Cargar dataset
 dataset <- read.table(dataset_path, header = TRUE, sep = ",")
+summary(dataset)
 
 # Vector con los indices de las columnas con datos continuos
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
@@ -65,98 +115,77 @@ class_column <- 17
 # ---------------------------------------------------------------------
 # 1. Preprocesamiento de datos
 
-# --/ Eliminamos la columna class_column
-dataset <- dataset[,-class_column]
-View(dataset, title = "Dataset original")
+# Eliminar la columna 'NObeyesdad' (columna 17)
+dataset <- dataset[, -class_column]
 
-# --/ Convertir datos categóricos a numericos
-dataset_numeric <- categorical_to_numeric(dataset, categorical_columns)
+# Convertir columnas a numericas
+dataset[, continuous_columns] <- lapply(dataset[, continuous_columns], as.numeric)
 
-# --/ Convertir todas las columnas a numericas
-dataset_numeric <- as.data.frame(lapply(dataset_numeric, as.numeric))
-View(dataset_numeric, title = "Dataset con todos los datos numericos")
+# Mapear las columnas categoricas a numericas (si son 2 categorias, se mapean a 0 y 1)
+for (i in categorical_columns) {
+	dataset[, i] <- sapply(dataset[, i], function(x) match(x, unique(dataset[, i])) - 1)
+}
 
+# Normalizar los datos
+dataset <- scale(dataset)
 
-# --/ Normalizamos los datos
-dataset_norm <- dataset_numeric
+# Eliminar valores extremos
+dataset <- dataset[apply(dataset, 1, function(x) all(abs(x) < 3)), ]
 
-dataset_norm <- lapply(dataset_numeric, 
-                       function(x) (x - mean(x))/sd(x) )
-
-dataset_normDF <- as.data.frame(dataset_norm)
-
-# --/--/ Resumen de los datos normalizados
-mean_values_norm <- sapply(dataset_normDF, mean)
-sd_values_norm <- sapply(dataset_normDF, sd)
-features_names <- names(dataset_normDF)
-
-# --/--/ Creamos un dataframe con los valores de la media y 
-#        desviacion estandar para cada caracteristica
-summary_norm <- data.frame(Media=mean_values_norm, 
-                            Desviacion_estandar =sd_values_norm)
-rownames(summary_norm) <- features_names
-View(summary_norm, title = "Resumen de los datos normalizados")
-
-# Eliminamos las valores extremos por medio de la media y la varianza
-# --/--/ Se eliminan filas que tengan al menos 
-#        una caracteristica con valor extremo
-dataset_normDF <- dataset_normDF[apply(dataset_normDF, 1, 
-                                function(x) all(abs(x) < 3)),]
-
-# --/--/ Imprimir cantidad de filas eliminadas por valores extremos
-cat("Cantidad de filas eliminadas por valores extremos: ", 
-    nrow(dataset_numeric) - nrow(dataset_normDF), "\n")
-
-#dataset_normDF <- as.data.frame(dataset_normDF)
 # ---------------------------------------------------------------------
-# 2. Agrupamiento de datos con K-means y Fuzzy K-means
+# 2. Clustering
 
-# --/ K-means
-# --/--/ Grupos a evaluar K=2,3,4,5,6,7,8,9,10
-k <- 2:10
+kclusters <- 2:10
 
-# --/--/ Calcular el score de la silueta para k = 2:10
-scoresKmenas <- sapply(k, function(x) silhouette_score(x, data=dataset_normDF, features=features_names))
+# A. K-means para cada valor de k
+kscores <- sapply(kclusters, function(x) silhouette_score(x, dataset, 1:ncol(dataset)))
+plot_silhouette_score(kclusters, kscores, "K-means")
 
-# --/--/ Guardar el score de la silueta en un dataframe
-# silhouette_scoresKmenas <- data.frame(k=k, scores=scoresKmenas)
-# View(silhouette_scoresKmenas, title = "Score de la silueta para K-means")
-
-# --/--/ Graficar el score de la silueta
-plot_silhouette_score(k, scoresKmenas, "Score de la silueta para K-means")
-
-# --/ Fuzzy K-means
-# --/--/ Valor de b a evaluar
+# B. Fuzzy k-means para cada valor de k
 b <- 1.5
-# --/--/ Calcular el score de la silueta para k = 2:10
-scoresFuzzyKmenas <- sapply(k, function(x) silhouette_score_fuzzy(x, data=dataset_normDF, features=features_names, b=b))
+kscores_fuzzy <- sapply(kclusters, function(x) silhouette_score_fuzzy(x, dataset, 1:ncol(dataset), b))
+plot_silhouette_score(kclusters, kscores_fuzzy, "Fuzzy k-means")
 
-# --/--/ Guardar el score de la silueta en un dataframe
-# silhouette_scoresFuzzyKmenas <- data.frame(k=k, scores=scoresFuzzyKmenas)
-# View(silhouette_scoresFuzzyKmenas, title = "Score de la silueta para Fuzzy K-means")
+# C. Encontrar caracteristicas por método envolvente
 
-# --/--/ Graficar el score de la silueta 
-plot_silhouette_score(k, scoresFuzzyKmenas, "Score de la silueta para Fuzzy K-means")
+# Eliminar columnas con datos categoricos
+dnew <- dataset[, -categorical_columns]
 
-# ---------------------------------------------------------------------
-# Selección de características
+# Obtenemos los names de las columnas
+nm = colnames(dnew)
 
-# Eliminamos las características binarias
-binary_colums <- c(1,5,6,10,12)
-individual_data <- dataset_df[-binary_colums]
+# --/ Encontrar el mejor subconjunto de características con K-means
+best_features_kmeans <- lapply(kclusters, function(kc) best_kfeatures(kc, dnew, 1:ncol(dnew)))
 
+# Graficar los scores de cada subconjunto de caracteristicas
+for (i in 1:length(kclusters)) {
+	x11()
+	plot(1:ncol(dnew), best_features_kmeans[[i]]$score, type = "b", xlab = "Número de características", 
+		ylab = "Score de la silueta", frame=FALSE, main=paste("K-means, K=", kclusters[i]), 
+		col="#33608C")
+}
 
-idx_features <- seq(from=1, to=11)
-featuresAll <- names(individual_data)
+# --/ Encontrar el mejor subconjunto de características con Fuzzy k-means
+best_features_fkmeans <- lapply(kclusters, function(kc) best_fkfeatures(kc, dnew, 1:ncol(dnew)))
 
+# Graficar los scores de cada subconjunto de caracteristicas
+for (i in 1:length(kclusters)) {
+	x11()
+	plot(1:ncol(dnew), best_features_fkmeans[[i]]$score, type = "b", xlab = "Número de características", 
+		ylab = "Score de la silueta", frame=FALSE, main=paste("Fuzzy k-means, K=", kclusters[i]), 
+		col="#33608C")
+}
 
-k_i <- 2
+# --/ A partir de los resultados obtenidos, se grafica el conteo de las caracteristicas seleccionadas
+#     por cada valor de K desde la caracteristica 1 hasta el score maximo
+#     (K-means)
+x11()
+plot(kclusters, sapply(best_features_kmeans, function(x) which.max(x$score)), 
+	type = "b", xlab = "Número de clusters", ylab = "Número de características seleccionadas", 
+	frame=FALSE, main="Seleccionadas K-means", col="#33608C")
 
-features_selected <- c()
-avg_sil_selected <- c()
-
-# avg_sil <- sapply(idx_features, function(x) 
-# 	silhouette_score(k_i, data = individual_data, features = featuresAll[x]))
-
-avg_sil <- sapply(featuresAll, function(x) 
-	silhouette_score(k_i, data = individual_data, features = featuresAll[x]))
+#     (Fuzzy k-means)
+x11()
+plot(kclusters, sapply(best_features_fkmeans, function(x) which.max(x$score)), 
+	type = "b", xlab = "Número de clusters", ylab = "Número de características seleccionadas", 
+	frame=FALSE, main="Seleccionadas Fuzzy k-means", col="#33608C")
