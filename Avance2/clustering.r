@@ -157,6 +157,17 @@ nm = colnames(dnew)
 # --/ Encontrar el mejor subconjunto de características con K-means
 best_features_kmeans <- lapply(kclusters, function(kc) best_kfeatures(kc, dnew, 1:ncol(dnew)))
 
+# --/ Imprimir las caracteristicas seleccionadas, su score y el centro de los clusters
+for (i in 1:length(kclusters)) {
+  cat("K-means, K=", kclusters[i], "\n")
+  cat("Caracteristicas seleccionadas: ", nm[best_features_kmeans[[i]]$features], "\n")
+  cat("Score: ", best_features_kmeans[[i]]$score, "\n")
+  
+  kmeans_model <- kmeans(dnew[, best_features_kmeans[[i]]$features], centers = kclusters[i], nstart = 25)
+  cat("Centros:\n")
+  print(kmeans_model$centers)
+}
+
 # Graficar los scores de cada subconjunto de caracteristicas
 for (i in 1:length(kclusters)) {
 	x11()
@@ -167,6 +178,20 @@ for (i in 1:length(kclusters)) {
 
 # --/ Encontrar el mejor subconjunto de características con Fuzzy k-means
 best_features_fkmeans <- lapply(kclusters, function(kc) best_fkfeatures(kc, dnew, 1:ncol(dnew)))
+
+# --/ Imprimir las caracteristicas seleccionadas, su score y el centro de los clusters
+for (i in 1:length(kclusters)) {
+  cat("K=", kclusters[i], ":", nm[best_features_fkmeans[[i]]$features], "\n")
+
+  cat("Score:", best_features_fkmeans[[i]]$score, "\n")
+
+  kmeans_model <- cmeans(dnew[, best_features_fkmeans[[i]]$features], centers = kclusters[i], m=b)
+  cat("Centros:\n")
+  print(kmeans_model$centers)
+
+  cat("\n")
+}
+
 
 # Graficar los scores de cada subconjunto de caracteristicas
 for (i in 1:length(kclusters)) {
