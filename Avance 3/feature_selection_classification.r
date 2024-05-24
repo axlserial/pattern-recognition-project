@@ -187,6 +187,13 @@ g2 <- ggcorr(correlationMatrix, label = TRUE, label_size = 3, color = "grey50", 
 # Guardamos el gráfico anterior
 ggsave("plots/correlation_data.png", g2)
 
+# ----------
+# Selección de caracteristicas para el 50% y 75% de los datos
+c50 <- floor(length(dataset_escalar) * 0.50)
+c75 <- floor(length(dataset_escalar) * 0.75)
 
-p1 <- forwardSelection(dataset_escalar, 5, correlationMatrix, fisherFactors, 0.1, 0.1)
-print(p1)
+p50 <- forwardSelection(dataset_escalar, c50, correlationMatrix, fisherFactors, 0.5, 0.5)
+print(p50)
+
+p75 <- forwardSelection(dataset_escalar, c75, correlationMatrix, fisherFactors, 0.5, 0.5)
+print(p75)
