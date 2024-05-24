@@ -36,41 +36,58 @@ fisherFactor <- function(dataset, classColumn, meansGlobalClass, feature) {
 # - classColumn: columna de la clase
 # - numFeatures: número de características a seleccionar
 # - correlationMatrix: matriz de correlación de Pearson
-# - ficherFactors: factores de Fisher
+# - fisherFactors: factores de Fisher
 # - alf1: 
 # - alf2:
 
-forwardSelection <- function(dataset, numFeatures, correlationMatrix, ficherFactors, alf1, alf2) {
+forwardSelection <- function(dataset, numFeatures, correlationMatrix, fisherFactors, alf1, alf2) {
     
     seledtedFeatures <- c()
 
     # Primera característica seleccionada
 
     # indice de la característica con mayor factor de Fisher
-    s1 <- which.max(ficherFactors)
+    s1 <- which.max(fisherFactors)
     s1nn <- names(fisherFactors)[s1]
 
     # Agregamos la característica a la lista de características seleccionadas
     seledtedFeatures <- c(seledtedFeatures, s1nn)
 
-    # Segunda característica seleccionada
-    
-    # Correlación de Pearson de la característica seleccionada s1
-    c_s1 <- correlationMatrix[s1nn, correlationMatrix[s1nn, ] != 1]
+	# Selección de la segunda característica
+	# Se obtiene la correlación de Pearson
+	corr <- correlationMatrix[s1nn, correlationMatrix[s1nn, ] != 1]
 
-    # Iteramos sobre el c_s1 para obtener la segunda característica, y aplicamos la formula
-    # max(alf1 * fisherFactors(Aj) - alf2 * abs(c_s1[i]))
-    s2_v <- lapply(c_s1, function(x) alf1 * ficherFactors[x] - alf2 * abs(x))
-    s2 <- which.max(s2_v)
-    s2nn <- names(s2_v)[s2]
+	# Se obtiene el factor de Fisher de las características no seleccionadas
+	fisher <- fisherFactors[fisherFactors != fisherFactors[s1]]
 
-    # Agregamos la característica a la lista de características seleccionadas
-    seledtedFeatures <- c(seledtedFeatures, s2nn)
+	# Se aplica la formula de selección: s2 = maxj{α1F(Aj) − α2|ρAs1,Aj|}, j ̸= s1
+	s2 <- which.max(alf1 * fisher - alf2 * corr)
+	s2nn <- names(fisherFactors)[s2]
 
+	# Agregamos la característica a la lista de características seleccionadas
+	seledtedFeatures <- c(seledtedFeatures, s2nn)
 
-    # Resto de las características seleccionadas
+	# Resto de las características seleccionadas
+	for (i in 3:numFeatures) {
+		not_selected <- names(fisherFactors)[!names(fisherFactors) %in% seledtedFeatures]
+		corrs <- correlationMatrix[seledtedFeatures, not_selected]
+		
+		sk_values <- c()
+		for (ns in not_selected) {
+			ns_fisher <- fisherFactors[ns]
+			corr_sum <- sum(abs(corrs[, ns]))
 
-    
+			sk_values <- c(sk_values, alf1 * ns_fisher - (alf2 / (i - 1)) * corr_sum)
+		}
+
+		# Obtenemos la mejor caracteristica
+		sk_index <- which.max(sk_values)
+		sk <- names(sk_values)[sk_index]
+
+		# Agregamos la característica a la lista de características seleccionadas
+		seledtedFeatures <- c(seledtedFeatures, sk)
+	}
+
     return(seledtedFeatures)
 }
 # ---------------------------------------------------------------------
@@ -173,11 +190,3 @@ ggsave("plots/correlation_data.png", g2)
 
 p1 <- forwardSelection(dataset_escalar, 5, correlationMatrix, fisherFactors, 0.1, 0.1)
 print(p1)
-
-# ind <- which.max(fisherFactors)
-
-# # Obtebnemos el nombre de las característica con mayor factor de Fisher
-# nn <- names(fisherFactors)[ind]
-
-# # Imprimimos los valores de la fila de la matriz de correlación que conincida con la variable nn y que no sea 1
-# print(correlationMatrix[nn, correlationMatrix[nn, ] != 1])
