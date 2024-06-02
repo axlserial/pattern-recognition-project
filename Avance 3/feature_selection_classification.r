@@ -41,7 +41,7 @@ fisherFactor <- function(dataset, classColumn, meansGlobalClass, feature) {
 # - alf2:
 
 forwardSelection <- function(dataset, numFeatures, correlationMatrix, fisherFactors, alf1, alf2) {
-    
+    fish <- c()
     seledtedFeatures <- c()
 
     # Primera característica seleccionada
@@ -49,6 +49,9 @@ forwardSelection <- function(dataset, numFeatures, correlationMatrix, fisherFact
     # indice de la característica con mayor factor de Fisher
     s1 <- which.max(fisherFactors)
     s1nn <- names(fisherFactors)[s1]
+
+    # Guardamos en fish la característica con mayor factor de Fisher
+    fish <- c(fish, max(fisherFactors))
 
     # Agregamos la característica a la lista de características seleccionadas
     seledtedFeatures <- c(seledtedFeatures, s1nn)
@@ -64,6 +67,7 @@ forwardSelection <- function(dataset, numFeatures, correlationMatrix, fisherFact
 	s2 <- which.max(alf1 * fisher - alf2 * corr)
 	s2nn <- names(fisherFactors)[s2]
 
+    fish <- c(fish, max(alf1 * fisher - alf2 * corr))
 	# Agregamos la característica a la lista de características seleccionadas
 	seledtedFeatures <- c(seledtedFeatures, s2nn)
 
@@ -80,15 +84,26 @@ forwardSelection <- function(dataset, numFeatures, correlationMatrix, fisherFact
 			sk_values <- c(sk_values, alf1 * ns_fisher - (alf2 / (i - 1)) * corr_sum)
 		}
 
+        cat("Correlación multi-variable en la iteración", i, ":", max(sk_values), "\n")
+        fish <- c(fish, max(sk_values))
+
 		# Obtenemos la mejor caracteristica
 		sk_index <- which.max(sk_values)
 		sk <- names(sk_values)[sk_index]
 
 		# Agregamos la característica a la lista de características seleccionadas
 		seledtedFeatures <- c(seledtedFeatures, sk)
+
+        # Analisis de la correlación multi-variable
+        # corrs <- correlationMatrix[seledtedFeatures, seledtedFeatures]
+        # corrs <- corrs[upper.tri(corrs, diag = FALSE)]
+
+        # # Imprimimos la correlación multi-variable, por iteración
+        # cat("Correlación multi-variable en la iteración", i, ":", max(corrs), "\n")
+        
 	}
 
-    return(seledtedFeatures)
+    list(selectedFeatures = seledtedFeatures, fish = fish)
 }
 # ---------------------------------------------------------------------
 
@@ -193,7 +208,29 @@ c50 <- floor(length(dataset_escalar) * 0.50)
 c75 <- floor(length(dataset_escalar) * 0.75)
 
 p50 <- forwardSelection(dataset_escalar, c50, correlationMatrix, fisherFactors, 0.5, 0.5)
-print(p50)
+print(p50$selectedFeatures)
+t50<- p50$selectedFeatures
+
+# Grfico de los factores de Fisher en t50, cada posición corresponde a una iteración (eje x) y 
+# el contenido es el valor del factor de Fisher (eje y)
+g3 <- ggplot(data = data.frame(fish = p50$fish), aes(x = 1:length(p50$fish), y = p50$fish)) +
+    geom_line(color = "skyblue") +
+    labs(title = "Factores de Fisher en la selección de características 50%", x = "Iteración", y = "Factor de Fisher")
+
+# Guardamos el gráfico anterior
+ggsave("plots/fisher_factors_selection_50.png", g3)
+
 
 p75 <- forwardSelection(dataset_escalar, c75, correlationMatrix, fisherFactors, 0.5, 0.5)
-print(p75)
+print(p75$selectedFeatures)
+t75 <- p50$fish
+
+# Grfico de los factores de Fisher en t75, cada posición corresponde a una iteración (eje x) y
+# el contenido es el valor del factor de Fisher (eje y)
+g4 <- ggplot(data = data.frame(fish = p75$fish), aes(x = 1:length(p75$fish), y = p75$fish)) +
+    geom_line(color = "skyblue") +
+    labs(title = "Factores de Fisher en la selección de características 75%", x = "Iteración", y = "Factor de Fisher")
+
+# Guardamos el gráfico anterior
+ggsave("plots/fisher_factors_selection_75.png", g4)
+
