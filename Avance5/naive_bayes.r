@@ -41,19 +41,12 @@ dataset[, -class_column] <- scale(dataset[, -class_column])
 #View(dataset)
 
 # ----------------------------------------------------------
-# 2. Division de datos en entrenamiento y prueba, 75% y 25% respectivamente
+# 2. Division de datos en entrenamiento y prueba, 75% y 25% respectivamente, eliminando la columna 'NObeyesdad'
+
+datasetP <- dataset[, -class_column]
 
 set.seed(215)
-split <- sample.split(dataset[, class_column], SplitRatio = 0.75)
-training_set <- subset(dataset, split == TRUE)
-#View(training_set)
-test_set <- subset(dataset, split == FALSE)
-#iew(test_set)
-
-# Imprimir el tamaño de los conjuntos de entrenamiento y prueba
-print(paste("Tamaño del conjunto de entrenamiento: ", nrow(training_set)))
-print(paste("Tamaño del conjunto de prueba: ", nrow(test_set)))
-
-# ----------------------------------------------------------
-# 3. Entrenamiento del modelo gaussian_naive_bayes
+split <- sample.split(datasetP, SplitRatio = 0.75)
+training_set <- subset(datasetP, split == TRUE)
+test_set <- subset(datasetP, split == FALSE)
 
