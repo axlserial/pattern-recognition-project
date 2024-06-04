@@ -9,7 +9,8 @@ library(caret)
 
 trainingKnn <- function(training_set, test_set, features, k) {
 	# Entrenamiento del modelo KNN
-  	knn_model <- knn(train = training_set[, features], test = test_set[, features], cl = training_set[, class_column], k = k)
+  	knn_model <- knn(train = training_set[, features], test = test_set[, features], 
+					 cl = training_set[, class_column], k = k)
   
   	# Matriz de confusion
   	confusion_matrix <- table(Prediction = knn_model, Reference = test_set[, class_column])
@@ -54,6 +55,7 @@ for (i in categorical_columns) {
 # Normalizar los datos, sin considerar la columna 'NObeyesdad'
 dataset[, -class_column] <- scale(dataset[, -class_column])
 #View(dataset)
+
 # ----------------------------------------------------------
 # 2. Division de datos en entrenamiento y prueba, 75% y 25% respectivamente
 
@@ -85,7 +87,8 @@ ggplot(data = confusion_matrix_df, aes(x = Reference, y = Prediction, fill = Fre
 	geom_tile() +
 	geom_text(aes(label = Freq), vjust = 1) +
 	scale_fill_gradient(low = "white", high = "blue") +
-	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", title="KNN considerendo todas las características") +
+	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", 
+	     title="KNN considerendo todas las características") +
 	
 x11()
 
@@ -106,7 +109,8 @@ ggplot(data = confusion_matrix_df_50, aes(x = Reference, y = Prediction, fill = 
 	geom_tile() +
 	geom_text(aes(label = Freq), vjust = 1) +
 	scale_fill_gradient(low = "white", high = "blue") +
-	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", title="KNN considerendo el 50% de las características") +
+	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", 
+	     title="KNN considerendo el 50% de las características") +
 
 x11()
 
@@ -127,7 +131,8 @@ ggplot(data = confusion_matrix_df_75, aes(x = Reference, y = Prediction, fill = 
 	geom_tile() +
 	geom_text(aes(label = Freq), vjust = 1) +
 	scale_fill_gradient(low = "white", high = "blue") +
-	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", title="KNN considerendo el 75% de las características") +
+	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", 
+	     title="KNN considerendo el 75% de las características") +
 
 x11()
 
@@ -154,6 +159,7 @@ ggplot(data = confusion_matrix_df_dtree, aes(x = Reference, y = Prediction, fill
 	geom_tile() +
 	geom_text(aes(label = Freq), vjust = 1) +
 	scale_fill_gradient(low = "white", high = "blue") +
-	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", title="KNN considerendo las características seleccionadas por el árbol de decisión") +
+	labs(x = "Clase real", y = "Clase predicha", fill = "Frecuencia", 
+	     title="KNN considerendo las características seleccionadas por el árbol de decisión") +
 
 x11()
