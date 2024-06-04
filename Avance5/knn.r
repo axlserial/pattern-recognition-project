@@ -2,8 +2,6 @@ library(here)
 library(ggplot2)
 library(caTools)
 library(class)
-library(naivebayes)
-library(caret)
 
 # ----------------------------------------------------------
 
