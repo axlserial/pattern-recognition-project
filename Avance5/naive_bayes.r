@@ -1,8 +1,11 @@
 library(here)
 library(ggplot2)
 library(caTools)
-library(class)
 library(naivebayes)
+
+# ----------------------------------------------------------
+
+# ----------------------------------------------------------
 
 # Ruta al dataset, Estimation of Obesity Levels Based On Eating Habits and Physical Condition
 dataset_path <- here("Datasets", "Avance1_B.csv")
@@ -15,7 +18,7 @@ summary(dataset)
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
 
 # Vector con los indices de las columnas con datos categoricos
-categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16, 17)
+categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16)
 
 # Variable con el indice de la columna clase
 class_column <- 17
@@ -35,6 +38,7 @@ for (i in categorical_columns) {
 
 # Normalizar los datos, sin considerar la columna 'NObeyesdad'
 dataset[, -class_column] <- scale(dataset[, -class_column])
+#View(dataset)
 
 # ----------------------------------------------------------
 # 2. Division de datos en entrenamiento y prueba, 75% y 25% respectivamente
@@ -42,14 +46,14 @@ dataset[, -class_column] <- scale(dataset[, -class_column])
 set.seed(215)
 split <- sample.split(dataset[, class_column], SplitRatio = 0.75)
 training_set <- subset(dataset, split == TRUE)
-View(training_set)
+#View(training_set)
 test_set <- subset(dataset, split == FALSE)
-View(test_set)
+#iew(test_set)
 
 # Imprimir el tamaño de los conjuntos de entrenamiento y prueba
 print(paste("Tamaño del conjunto de entrenamiento: ", nrow(training_set)))
 print(paste("Tamaño del conjunto de prueba: ", nrow(test_set)))
 
 # ----------------------------------------------------------
+# 3. Entrenamiento del modelo gaussian_naive_bayes
 
-# 3. Naive Bayes numeric
