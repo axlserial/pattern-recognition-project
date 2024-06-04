@@ -271,3 +271,8 @@ nombres_caracteristicas <- nombres_caracteristicas[nombres_caracteristicas != "<
 
 # Imprimimos los valores unicos de nombres_caracteristicas
 print(unique(nombres_caracteristicas))
+
+all_features <- unique(nombres_caracteristicas)
+
+# Guardamos las características seleccionadas en un archivo txt
+write.table(all_features, "Avance5/selected_features_dtree.txt", row.names = FALSE, col.names = FALSE)
