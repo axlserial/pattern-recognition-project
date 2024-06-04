@@ -56,12 +56,12 @@ dataset[, -class_column] <- scale(dataset[, -class_column])
 
 # ----------------------------------------------------------
 # 2. Division de datos en entrenamiento y prueba, 75% y 25% respectivamente
-
+datasetP <- dataset[, -class_column]
 set.seed(215)
-split <- sample.split(dataset[, class_column], SplitRatio = 0.75)
-training_set <- subset(dataset, split == TRUE)
+split <- sample.split(datasetP, SplitRatio = 0.75)
+training_set <- subset(datasetP, split == TRUE)
 #View(training_set)
-test_set <- subset(dataset, split == FALSE)
+test_set <- subset(datasetP, split == FALSE)
 #iew(test_set)
 
 # Imprimir el tamaño de los conjuntos de entrenamiento y prueba
