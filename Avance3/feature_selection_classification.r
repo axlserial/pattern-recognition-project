@@ -118,7 +118,7 @@ summary(dataset)
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
 
 # Vector con los indices de las columnas con datos categoricos
-categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16, 17)
+categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16)
 
 # Variable con el indice de la columna clase
 class_column <- 17
@@ -223,7 +223,7 @@ ggsave("plots/fisher_factors_selection_50.png", g3)
 
 p75 <- forwardSelection(dataset_escalar, c75, correlationMatrix, fisherFactors, 0.5, 0.5)
 print(p75$selectedFeatures)
-t75 <- p50$fish
+t75 <- p75$fish
 
 # Grfico de los factores de Fisher en t75, cada posición corresponde a una iteración (eje x) y
 # el contenido es el valor del factor de Fisher (eje y)

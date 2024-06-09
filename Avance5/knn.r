@@ -5,13 +5,14 @@ library(class)
 
 # ----------------------------------------------------------
 
-trainingKnn <- function(training_set, test_set, features, k) {
+trainingKnn <- function(training_set, test_set, features, k, class_column) {
 	# Entrenamiento del modelo KNN
   	knn_model <- knn(train = training_set[, features], test = test_set[, features], 
 					 cl = training_set[, class_column], k = k)
   
   	# Matriz de confusion
   	confusion_matrix <- table(Prediction = knn_model, Reference = test_set[, class_column])
+	print(confusion_matrix)
   
   	# Convertir la matriz de confusion a un dataframe para ggplot
   	confusion_matrix_df <- as.data.frame.table(confusion_matrix)
@@ -32,7 +33,7 @@ summary(dataset)
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
 
 # Vector con los indices de las columnas con datos categoricos
-categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16, 17)
+categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16)
 
 # Variable con el indice de la columna clase
 class_column <- 17
@@ -54,19 +55,24 @@ for (i in categorical_columns) {
 dataset[, -class_column] <- scale(dataset[, -class_column])
 #View(dataset)
 
+# Eliminar valores extremos, sin considerar la columna 'NObeyesdad' , mas de 3 desviaciones estandar
+dataset <- dataset[apply(dataset[, -class_column], 1, function(x) all(abs(x) < 3)),]
+
+
 # ----------------------------------------------------------
 # 2. Division de datos en entrenamiento y prueba, 75% y 25% respectivamente
-datasetP <- dataset[, -class_column]
 set.seed(215)
-split <- sample.split(datasetP, SplitRatio = 0.75)
-training_set <- subset(datasetP, split == TRUE)
+split <- sample.split(dataset[, class_column], SplitRatio = 0.75)
+training_set <- subset(dataset, split == TRUE)
 #View(training_set)
-test_set <- subset(datasetP, split == FALSE)
-#iew(test_set)
+test_set <- subset(dataset, split == FALSE)
+#View(test_set)
 
 # Imprimir el tamaño de los conjuntos de entrenamiento y prueba
 print(paste("Tamaño del conjunto de entrenamiento: ", nrow(training_set)))
 print(paste("Tamaño del conjunto de prueba: ", nrow(test_set)))
+
+
 
 # ----------------------------------------------------------
 # 3. K-Nearest Neighbors (KNN)
@@ -75,9 +81,11 @@ print(paste("Tamaño del conjunto de prueba: ", nrow(test_set)))
 k <- length(unique(training_set[, class_column]))
 print(paste("Numero de clases: ", k))
 
+# Indice de las caracteristicas seleccionadas
+selected_features <- names(dataset[,-class_column])
 
 # Entrenamiento del modelo KNN para todas las caracteristicas
-confusion_matrix_df <- trainingKnn(training_set, test_set, dataset[,-class_column], k)
+confusion_matrix_df <- trainingKnn(training_set, test_set, selected_features, k, 17)
 
 # Visualizar la matriz de confusion
 print("Matriz de confusion:")
@@ -93,13 +101,23 @@ x11()
 # Entrenamiento del modelo KNN para el 50% de las caracteristicas obtenidas de forma aletoria
 
 # Seleccionar 50% de las caracteristicas de forma aleatoria
-random_features <- sample(1:ncol(dataset[,-class_column]), ncol(dataset[,-class_column]) * 0.5)
+# Cargar las caracteristicas seleccionadas, son los nombres de las columnas a considerar
+features <- scan("Avance5/features_50.txt", what = character())
+
+# Cerrar la conexion al archivo
+close("Avance5/features_50.txt")
+
+# Obtener los indices de las columnas seleccionadas
+selected_features_50 <- match(features, names)
 
 # Impresion de las caracteristicas seleccionadas
-print(paste("Caracteristicas seleccionadas: ", names[random_features]))
+print(paste("Caracteristicas seleccionadas: ", names[selected_features_50]))
+
+# Indice de las caracteristicas seleccionadas
+selected_features_50 <- names[selected_features_50]
 
 # Entrenamiento del modelo KNN
-confusion_matrix_df_50 <- trainingKnn(training_set, test_set, dataset[,random_features], k)
+confusion_matrix_df_50 <- trainingKnn(training_set, test_set, selected_features_50, k, 17)
 
 # Visualizar la matriz de confusion
 print("Matriz de confusion:")
@@ -115,13 +133,23 @@ x11()
 # Entrenamiento del modelo KNN para el 75% de las caracteristicas obtenidas de forma aletoria
 
 # Seleccionar 75% de las caracteristicas de forma aleatoria
-random_features <- sample(1:ncol(dataset[,-class_column]), ncol(dataset[,-class_column]) * 0.75)
+# Cargar las caracteristicas seleccionadas, son los nombres de las columnas a considerar
+features <- scan("Avance5/features_75.txt", what = character())
+
+# Cerrar la conexion al archivo
+close("Avance5/features_75.txt")
+
+# Obtener los indices de las columnas seleccionadas
+selected_features_75 <- match(features, names)
 
 # Impresion de las caracteristicas seleccionadas
-print(paste("Caracteristicas seleccionadas: ", names[random_features]))
+print(paste("Caracteristicas seleccionadas: ", names[selected_features_75]))
+
+# Indice de las caracteristicas seleccionadas
+selected_features_75 <- names[selected_features_75]
 
 # Entrenamiento del modelo KNN
-confusion_matrix_df_75 <- trainingKnn(training_set, test_set, dataset[,random_features], k)
+confusion_matrix_df_75 <- trainingKnn(training_set, test_set, selected_features_75, k,17)
 
 # Visualizar la matriz de confusion
 print("Matriz de confusion:")
@@ -143,13 +171,16 @@ features <- scan("Avance5/selected_features_dtree.txt", what = character())
 close("Avance5/selected_features_dtree.txt")
 
 # Obtener los indices de las columnas seleccionadas
-selected_features <- match(features, names)
+selected_features_tree <- match(features, names)
 
 # Impresion de las caracteristicas seleccionadas
-print(paste("Caracteristicas seleccionadas: ", names[selected_features]))
+print(paste("Caracteristicas seleccionadas: ", names[selected_features_tree]))
+
+# Indice de las caracteristicas seleccionadas
+selected_features_tree <- names[selected_features_tree]
 
 # Entrenamiento del modelo KNN
-confusion_matrix_df_dtree <- trainingKnn(training_set, test_set, dataset[,selected_features], k)
+confusion_matrix_df_dtree <- trainingKnn(training_set, test_set, selected_features_tree, k, 17)
 
 # Visualizar la matriz de confusion
 print("Matriz de confusion:")

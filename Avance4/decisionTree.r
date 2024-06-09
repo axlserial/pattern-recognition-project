@@ -120,7 +120,7 @@ summary(dataset)
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
 
 # Vector con los indices de las columnas con datos categoricos
-categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16, 17)
+categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16)
 
 # Variable con el indice de la columna clase
 class_column <- 17
