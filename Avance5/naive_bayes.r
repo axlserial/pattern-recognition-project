@@ -69,6 +69,8 @@ print(paste("Tamaño del conjunto de prueba: ", nrow(test_set)))
 ppriori <- table(training_set$NObeyesdad)
 ppriori <- ppriori / sum(ppriori)
 
+print("Probabilidades a priori:")
+print(ppriori)
 
 # Entrenamiento del modelo
 classiffier_gnb <- gaussian_naive_bayes(
