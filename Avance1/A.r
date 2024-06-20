@@ -77,7 +77,7 @@ for (feature in categorical_class_columns) {
 	print(p)
 
 	# --/--/ Guardar PNG con la gráfica
-	ggsave(paste("Frecuencias_", col_name, ".png"), plot = p, path = here("plots"))
+	#ggsave(paste("Frecuencias_", col_name, ".png"), plot = p, path = here("plots"))
 
 	# --/--/ Imprimir descripción
 	cat("Feature: ", col_name, "\tMode: ", mode_values[col_name], "\n")
@@ -135,5 +135,5 @@ for (feature in continuous_columns) {
 	print(p)
 
 	# --/--/ Guardar PNG con la gráfica
-	ggsave(paste("Histograma_", col_name, ".png"), plot = p, path = here("plots"))
+	#ggsave(paste("Histograma_", col_name, ".png"), plot = p, path = here("plots"))
 }

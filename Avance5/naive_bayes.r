@@ -40,8 +40,8 @@ for (i in categorical_columns) {
 dataset[, class_column] <- as.factor(dataset[, class_column])
 
 # Normalizar los datos, sin considerar la columna 'NObeyesdad'
-#dataset[, -class_column] <- scale(dataset[, -class_column])
-#View(dataset)
+dataset[, -class_column] <- scale(dataset[, -class_column])
+View(dataset)
 
 # Eliminar valores extremos, sin considerar la columna 'NObeyesdad' , mas de 3 desviaciones estandar
 #dataset <- dataset[apply(dataset[, -class_column], 1, function(x) all(abs(x) < 3)),]
