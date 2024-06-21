@@ -126,6 +126,9 @@ fisherFactor <- function(dataset, classColumn, meansGlobalClass, feature) {
     # Media condicional de la característica de acuerdo a la clase
     meansClass <- tapply(featureColumn, classColumn, mean)
 
+	# Si media de la clase es NA, se asigna 0
+	meansClass[is.na(meansClass)] <- 0
+
     # Desviación estandar condicional de la característica de acuerdo a la clase
     devestsClass <- tapply(featureColumn, classColumn, sd)
 
@@ -225,6 +228,8 @@ dataset_path <- here("Datasets", "Avance1_B.csv")
 # Cargar dataset
 dataset <- read.table(dataset_path, header = TRUE, sep = ",")
 summary(dataset)
+
+data2 <- dataset
 
 # Vector con los indices de las columnas con datos continuos
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
@@ -344,8 +349,12 @@ for (i in categorical_columns) {
 # --/ Normalización de datos continuos:
 
 # --/--/ Normalización
-dataset_norm <- dataset[,-class_column]
-dataset_norm[, continuous_columns] <- scale(dataset[,continuous_columns])
+dataset_norm <- dataset
+
+cc <- c(categorical_columns, class_column)
+dataset_norm[, -cc] <- scale(dataset_norm[, -cc])
+
+View(dataset_norm)
 
 # --/ Eliminación de valores extremos:
 
@@ -447,15 +456,17 @@ plot(kclusters, sapply(best_features_fkmeans, function(x) which.max(x$score)),
 dev.off()
 
 # ---------------------------------------------------------------------
-# 4. Clasificación
+# 4. Selección de características
 
-# --/ Selección de características
-
-# --/--/ Rankeo de características con Fisher
-
+# Rankeo de las características con el factor de Fisher
 meansGlobalClass <- colMeans(dataset_norm[, -class_column])
+View(meansGlobalClass)
 
+fisherFactors <- sapply(1:ncol(dataset_norm), function(x) fisherFactor(dataset_norm, class_column, meansGlobalClass, x))
 
+# Imprimir el factor de Fisher de cada característica y el nombre de la característica
+cat("Factor de Fisher de cada característica:\n")
 
-# Calcular factor de Fisher para cada característica, indicando el nombre de la característica
-fisherFactors <- sapply(1:ncol(dataset_norm), function(x) fisherFactor(dataset_norm, 17, meansGlobalClass, x))
+for (i in 1:length(fisherFactors)) {
+	cat(colnames(dataset_norm)[i], ": ", fisherFactors[i], "\n")
+}
