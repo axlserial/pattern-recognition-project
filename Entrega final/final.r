@@ -16,100 +16,6 @@ library(rpart.plot)
 library(caTools)
 library(class)
 
-# ---------------------------------------------------------------------
- 
-# Funcion para calcular el coeficiente de silueta para un modelo de k-means
-silhouette_score <- function(k, data, features) {
-  	kmeans_model <- kmeans(data[, features], centers = k, nstart = 25)
-  	silhouette_score <- silhouette(kmeans_model$cluster, dist(data[, features]))
-  
-	return (mean(silhouette_score[, 3]))
-}
-
-# Funcion para calcular el coeficiente de silueta para un modelo de Fuzzy k-means
-silhouette_score_fuzzy <- function(k, data, features, b) {
-    kmeans_model <- cmeans(data[, features], centers = k, m=b)
-    silhouette_score <- silhouette(kmeans_model$cluster, dist(data[, features]))
-  
-    return (mean(silhouette_score[, 3]))
-}
-
-# Funcion para encontrar la mejor caracteristica para un modelo de k-means
-best_kmeans <- function(k, data, features, selected_features=c()) {
-	actual_scores <- sapply(features, function(f) 
-		silhouette_score(k, data, c(selected_features, f)))
-	best_feature <- which.max(actual_scores)
-
-	return (list(feature=best_feature, score=actual_scores[best_feature]))
-}
-
-# Funcion para encontrar la mejor caracteristica para un modelo de Fuzzy k-means
-best_fkmeans <- function(k, data, features, selected_features=c()) {
-	actual_scores <- sapply(features, function(f) 
-		silhouette_score_fuzzy(k, data, c(selected_features, f), b))
-	best_feature <- which.max(actual_scores)
-
-	return (list(feature=best_feature, score=actual_scores[best_feature]))
-}
-
-# --/ Funcion para encontrar el mejor subconjunto de caracteristicas por cada valor de K
-#     utilizando el metodo envolvente (K-means)
-best_kfeatures <- function(k, data, features) {
-	selected_features <- c()
-	selected_avg_score <- c()
-	
-	# Se obtiene la 1ra caracteristica
-	actual_features <- features
-	best <- best_kmeans(k, data, actual_features)
-	selected_features <- c(selected_features, actual_features[best$feature])
-	selected_avg_score <- c(selected_avg_score, best$score)
-
-	#print(selected_features)
-
-	# Se obtienen las demas caracteristicas
-	for (i in 2:length(features)) {
-		actual_features <- features[!features %in% selected_features]
-		best <- best_kmeans(k, data, actual_features, selected_features)
-		selected_features <- c(selected_features, actual_features[best$feature])
-		selected_avg_score <- c(selected_avg_score, best$score)
-		#print(selected_features)
-	}
-
-	return (list(features=selected_features, score=selected_avg_score))
-}
-
-# --/ Funcion para encontrar el mejor subconjunto de caracteristicas por cada valor de K
-#     utilizando el metodo envolvente (Fuzzy k-means)
-best_fkfeatures <- function(k, data, features) {
-	selected_features <- c()
-	selected_avg_score <- c()
-	
-	# Se obtiene la 1ra caracteristica
-	actual_features <- features
-	best <- best_fkmeans(k, data, actual_features)
-	selected_features <- c(selected_features, actual_features[best$feature])
-	selected_avg_score <- c(selected_avg_score, best$score)
-
-	# Se obtienen las demas caracteristicas
-	for (i in 2:length(features)) {
-		actual_features <- features[!features %in% selected_features]
-		best <- best_fkmeans(k, data, actual_features, selected_features)
-		selected_features <- c(selected_features, actual_features[best$feature])
-		selected_avg_score <- c(selected_avg_score, best$score)
-	}
-
-	return (list(features=selected_features, score=selected_avg_score))
-}
-
-# Graficar el score de la silueta
-plot_silhouette_score <- function(k, scores, title, file) {
-	png(file=paste0(here("plots", "agrupamiento"),"/", file, ".png"))
-	plot(k, type = "b", scores, xlab = "Número de clusters", 
-    	ylab = "Score de la silueta", frame=FALSE, main=title, 
-    	col="#33608C")
-	dev.off()
-}
-
 # Función para calcular el factor de Fisher, donde se tienen los siguientes parámetros:
 # - dataset: dataset con las características
 # - classColumn: columna de la clase
@@ -125,9 +31,6 @@ fisherFactor <- function(dataset, classColumn, meansGlobalClass, feature) {
 
     # Media condicional de la característica de acuerdo a la clase
     meansClass <- tapply(featureColumn, classColumn, mean)
-
-	# Si media de la clase es NA, se asigna 0
-	meansClass[is.na(meansClass)] <- 0
 
     # Desviación estandar condicional de la característica de acuerdo a la clase
     devestsClass <- tapply(featureColumn, classColumn, sd)
@@ -229,8 +132,6 @@ dataset_path <- here("Datasets", "Avance1_B.csv")
 dataset <- read.table(dataset_path, header = TRUE, sep = ",")
 summary(dataset)
 
-data2 <- dataset
-
 # Vector con los indices de las columnas con datos continuos
 continuous_columns <- c(2, 3, 4, 7, 8, 11, 13, 14)
 
@@ -240,93 +141,11 @@ categorical_columns <- c(1, 5, 6, 9, 10, 12, 15, 16)
 # Variable con el indice de la columna clase
 class_column <- 17
 
-# Convertir columnas a numericas
-dataset[, continuous_columns] <- lapply(dataset[, continuous_columns], as.numeric)
-
-# Convertir columnas a factores
-dataset[, categorical_columns] <- lapply(dataset[, categorical_columns], factor)
-
-# Convertir columna clase a factor
-dataset[, class_column] <- factor(dataset[, class_column])
+# Nombre de las columnas
+names <- colnames(dataset)
 
 # Resumen de los datos
 summary(dataset)
-
-
-# ---------------------------------------------------------------------
-# 1. Descripción de los datos
-
-# --/ Para datos continuos:
-
-# --/--/ MAX
-max_values <- sapply(dataset[, continuous_columns], max)
-
-# --/--/ MIN
-min_values <- sapply(dataset[, continuous_columns], min)
-
-# --/--/ Promedio
-mean_values <- sapply(dataset[, continuous_columns], mean)
-
-# --/--/ Desviación estándar
-sd_values <- sapply(dataset[, continuous_columns], sd)
-
-
-j <- 1
-# --/ Histogramas de las caracteristicas continuas
-for (feature in continuous_columns) {
-	col_name <- colnames(dataset[])[feature]
-
-	p <- ggplot(dataset, aes(x=dataset[, feature])) + 
-		geom_histogram(binwidth = 1, color="grey", fill=colors[j], alpha=0.2) + 
-		labs(title = paste("Histograma de:", col_name), x=col_name, y="Frecuencia")+
-        theme(plot.title = element_text(hjust=0.5, size=18, face="bold"),
-              axis.title=element_text(size=13, face="italic"),
-              axis.text=element_text(size=12))
-
-	# x11()
-	# print(p)
-
-    j <- j+1
-
-	# --/--/ Guardar PNG con la gráfica
-	ggsave(paste("Histograma_", col_name, ".png"), plot = p, path = here("plots", "description"), 
-    width=10, height=8, units="in")
-}
-
-
-# --/ Para datos categóricos:
-
-# --/--/ Moda
-mode_values <- sapply(dataset[, categorical_columns], Mode)
-# --/--/ Frecuencia de valores (y la columna de clase)
-categorical_class_columns <- c(categorical_columns, class_column)
-
-colors <- rainbow(ncol(dataset[, categorical_columns]))
-print(colors)
-i <- 1
-for (feature in categorical_class_columns) {
-	col_name <- colnames(dataset)[feature]
-
-	dataframe <- as.data.frame(table(dataset[, feature]))
-	names(dataframe) <- c(col_name, "Freq")
-
-	p <- ggplot(data = dataframe, aes(x=dataframe[, 1], y=dataframe[, 2])) + 
-		geom_bar(stat = "identity", fill=colors[i], alpha=0.2) + 
-		labs(title = paste("Frecuencias para la caracteristica: ", col_name), x=col_name, y="Frecuencia")+
-        theme(plot.title = element_text(hjust=0.5, size=18, face="bold"),
-              axis.title=element_text(size=13, face="italic"),
-              axis.text=element_text(size=12))
-	#x11()
-	#print(p)
-    i <- i+1
-
-	# --/--/ Guardar PNG con la gráfica
-	ggsave(paste("Frecuencias_", col_name, ".png"), plot = p, path = here("plots", "description"), 
-    width=10, height=8, units="in")
-    
-	# --/--/ Imprimir descripción
-	cat("Feature: ", col_name, "\tMode: ", mode_values[col_name], "\n")
-}
 
 # ---------------------------------------------------------------------
 # 2. Preprocesamiento
@@ -338,13 +157,15 @@ data_na <- sum(is.na(dataset))
 
 cat("Existen ", data_na, " datos faltantes.", "\n")
 
-# --/ Convertir datos categóricos a numéricos: 
+# Convertir columnas a numericas
 dataset[, continuous_columns] <- lapply(dataset[, continuous_columns], as.numeric)
 
-# --/--/ Mapear las columnas categoricas a numericas (si son 2 categorias, se mapean a 0 y 1)
+# Mapear las columnas categoricas a numericas (si son 2 categorias, se mapean a 0 y 1)
 for (i in categorical_columns) {
 	dataset[, i] <- sapply(dataset[, i], function(x) match(x, unique(dataset[, i])) - 1)
 }
+
+dataset[, categorical_columns] <- lapply(dataset[, categorical_columns], as.numeric)
 
 # --/ Normalización de datos continuos:
 
@@ -353,8 +174,6 @@ dataset_norm <- dataset
 
 cc <- c(categorical_columns, class_column)
 dataset_norm[, -cc] <- scale(dataset_norm[, -cc])
-
-View(dataset_norm)
 
 # --/ Eliminación de valores extremos:
 
@@ -365,108 +184,252 @@ dataset_norm <- dataset_norm[apply(dataset_norm[, continuous_columns], 1, functi
 # --/--/ Imprimir cantidad de filas eliminadas por valores extremos
 cat("Filas eliminadas por valores extremos: ", nrow(dataset) - nrow(dataset_norm), "\n")
 
-
-# ---------------------------------------------------------------------
-# 3. Agrupamiento
-
-kclusters <- 2:10
-
-indice <- match("NObeyesdad", colnames(dataset_norm))
-dataset_clustering <- dataset_norm[,-indice]
-
-# --/ K-means para cada valor de k: 
-kscores <- sapply(kclusters, function(x) silhouette_score(x, dataset_clustering, 1:ncol(dataset_clustering)))
-plot_silhouette_score(kclusters, kscores, "K-means", "kmeans")
-
-# --/ Fuzzy k-means para cada valor de k:
-b <- 1.5
-kscores_fuzzy <- sapply(kclusters, function(x) silhouette_score_fuzzy(x, dataset_clustering, 1:ncol(dataset_clustering), b))
-plot_silhouette_score(kclusters, kscores_fuzzy, "Fuzzy k-means", "fuzzykmeans")
-
-
-# Eliminar columnas con datos categoricos
-dnew <- dataset_clustering[, -categorical_columns]
-
-# Obtenemos los names de las columnas
-nm = colnames(dnew)
-
-# --/ Encontrar el mejor subconjunto de características con K-means
-best_features_kmeans <- lapply(kclusters, function(kc) best_kfeatures(kc, dnew, 1:ncol(dnew)))
-
-# --/--/ Imprimir las caracteristicas seleccionadas, su score y el centro de los clusters
-for (i in 1:length(kclusters)) {
-  cat("K-means, K=", kclusters[i], "\n")
-  cat("Caracteristicas seleccionadas: ", nm[best_features_kmeans[[i]]$features], "\n")
-  cat("Score: ", best_features_kmeans[[i]]$score, "\n")
-  
-  kmeans_model <- kmeans(dnew[, best_features_kmeans[[i]]$features], centers = kclusters[i], nstart = 25)
-  cat("Centros:\n")
-  print(kmeans_model$centers)
-}
-
-# --/--/ Graficar los scores de cada subconjunto de caracteristicas
-for (i in 1:length(kclusters)) {
-	png(file=paste0(here("plots", "agrupamiento","kmeans"),"/km_", i+1, ".png"))
-	plot(1:ncol(dnew), best_features_kmeans[[i]]$score, type = "b", xlab = "Número de características", 
-		ylab = "Score de la silueta", frame=FALSE, main=paste("K-means, K=", kclusters[i]), 
-		col="#33608C")
-	dev.off()
-}
-
-# --/ Encontrar el mejor subconjunto de características con Fuzzy k-means
-best_features_fkmeans <- lapply(kclusters, function(kc) best_fkfeatures(kc, dnew, 1:ncol(dnew)))
-
-# --/--/ Imprimir las caracteristicas seleccionadas, su score y el centro de los clusters
-for (i in 1:length(kclusters)) {
-  cat("K=", kclusters[i], ":", nm[best_features_fkmeans[[i]]$features], "\n")
-
-  cat("Score:", best_features_fkmeans[[i]]$score, "\n")
-
-  kmeans_model <- cmeans(dnew[, best_features_fkmeans[[i]]$features], centers = kclusters[i], m=b)
-  cat("Centros:\n")
-  print(kmeans_model$centers)
-
-  cat("\n")
-}
-
-# --/--/ Graficar los scores de cada subconjunto de caracteristicas
-for (i in 1:length(kclusters)) {
-	png(file=paste0(here("plots", "agrupamiento","fkmeans"),"/fkm_", i+1, ".png"))
-	plot(1:ncol(dnew), best_features_fkmeans[[i]]$score, type = "b", xlab = "Número de características", 
-		ylab = "Score de la silueta", frame=FALSE, main=paste("Fuzzy k-means, K=", kclusters[i]), 
-		col="#33608C")
-	dev.off()
-}
-
-# --/ A partir de los resultados obtenidos, se grafica el conteo de las caracteristicas seleccionadas
-#     por cada valor de K desde la caracteristica 1 hasta el score maximo
-
-# --/--/ (K-means)
-png(file=paste0(here("plots", "agrupamiento"),"/fkm_caracteristicas",".png"))
-plot(kclusters, sapply(best_features_kmeans, function(x) which.max(x$score)), 
-	type = "b", xlab = "Número de clusters", ylab = "Número de características seleccionadas", 
-	frame=FALSE, main="Seleccionadas K-means", col="#33608C")
-dev.off()
-
-# --/--/ (Fuzzy k-means)
-png(file=paste0(here("plots", "agrupamiento"),"/km_caracteristicas",".png"))
-plot(kclusters, sapply(best_features_fkmeans, function(x) which.max(x$score)), 
-	type = "b", xlab = "Número de clusters", ylab = "Número de características seleccionadas", 
-	frame=FALSE, main="Seleccionadas Fuzzy k-means", col="#33608C")
-dev.off()
-
 # ---------------------------------------------------------------------
 # 4. Selección de características
 
-# Rankeo de las características con el factor de Fisher
-meansGlobalClass <- colMeans(dataset_norm[, -class_column])
-View(meansGlobalClass)
+# --/ Selección individual (características numéricas), con factor de Fisher
 
+# --/--/ Media global de cada característica
+meansGlobalClass <- colMeans(dataset_norm[, -class_column])
+
+# --/--/ Calcular factor de Fisher para cada característica, indicando el nombre de la característica
 fisherFactors <- sapply(1:ncol(dataset_norm), function(x) fisherFactor(dataset_norm, class_column, meansGlobalClass, x))
 
-# Imprimir el factor de Fisher de cada característica y el nombre de la característica
-cat("Factor de Fisher de cada característica:\n")
-
+# --/--/ Imprimimos nombre de las características y su factor de Fisher
+cat("Características y su factor de Fisher:\n")
 for (i in 1:length(fisherFactors)) {
-	cat(colnames(dataset_norm)[i], ": ", fisherFactors[i], "\n")
+	cat(names[i], ": ", fisherFactors[i], "\n")
 }
+
+# --/--/ Características con factor de Fisher NaN (no se pudo calcular)
+nanFeatures <- names(dataset[is.nan(fisherFactors)])
+print(nanFeatures)
+
+# --/--/ Agregamos los nombres de las características a fisherFactors
+names(fisherFactors) <- names
+
+# Ordenamos de mayor a menor
+fisherFactors <- sort(fisherFactors, decreasing = TRUE)
+
+# --/--/ Graficamos los factores de Fisher agregando el valor de cada característica 
+g1 <- ggplot(data = data.frame(names = names(fisherFactors), fisherFactors = fisherFactors), aes(x = reorder(names, fisherFactors), y = fisherFactors)) +
+    geom_bar(stat = "identity", fill = "skyblue") +
+    coord_flip() +
+    labs(title = "Factor de Fisher de las características", x = "Características", y = "Factor de Fisher") +
+    geom_text(aes(label = round(fisherFactors, 2)), vjust = -0.5, size = 3)
+
+# --/--/ Guardar PNG con la gráfica
+ggsave("fisher_factors_rank_ind.png", plot = g1, path = here("plots", "seleccion"), 
+       width=10, height=8, units="in")
+
+# --/ Selección de subconjuntos de características por el metodo Escalar hacia delante
+
+# --/--/ Buscamos características con factor de Fisher NaN
+nanFeatures <- names(fisherFactors[is.nan(fisherFactors)])
+
+# Dataset con las características que no presentan problemas y la columna  de la clase
+dataset_escalar <- dataset_norm
+
+# --/--/ Correlación de Pearson entre las características
+correlationMatrix <- round(cor(dataset_escalar[, -class_column]),2)
+View(correlationMatrix)
+
+# --/--/ Graficamos la matriz de correlación de datos
+g2 <- ggcorr(correlationMatrix, label = TRUE, label_size = 3, color = "grey50", nbreaks = 6) +
+    labs(title = "Correlación de los datos", center = "center")
+
+# --/--/ Guardamos el gráfico anterior
+ggsave("correlation_data.png", plot = g2, path = here("plots", "seleccion"), 
+	   width=10, height=8, units="in")
+
+# --/--/ Selección de caracteristicas para el 50% y 75% de los datos
+c50 <- floor(length(dataset_escalar) * 0.50)
+c75 <- floor(length(dataset_escalar) * 0.75)
+
+# --/--/ Parámetros para el método Escalar hacia delante
+alf1 <- 0.5
+alf2 <- 0.5
+
+# --/--/ Selección de características para el 50%
+p50 <- forwardSelection(dataset_escalar, c50, correlationMatrix, fisherFactors, alf1, alf2)
+print(p50$selectedFeatures)
+
+# --/--/ Guardamos las características seleccionadas en un archivo .txt, cara característica en una línea
+write.table(p50$selectedFeatures, file = here('Entrega final',"selected_features_50.txt"), row.names = FALSE, col.names = FALSE)
+
+# --/--/ Fishers de las características seleccionadas
+t50 <- p50$fish
+
+# --/--/ Grfico de los factores de Fisher en t50
+g3 <- ggplot(data = data.frame(fish = t50), aes(x = 1:length(t50), y = t50)) +
+    geom_line(color = "skyblue") +
+    labs(title = "Factores de Fisher en la selección de características 50%", x = "Iteración", y = "Factor de Fisher")
+
+# --/--/ Guardamos el gráfico anterior
+ggsave("fisher_factors_selection_50.png", plot = g3, path = here("plots", "seleccion"), 
+	   width=10, height=8, units="in")
+
+# --/--/ Selección de características para el 75%
+p75 <- forwardSelection(dataset_escalar, c75, correlationMatrix, fisherFactors, alf1, alf2)
+print(p75$selectedFeatures)
+
+# --/--/ Guardamos las características seleccionadas en un archivo .txt, cara característica en una línea
+write.table(p75$selectedFeatures, file = here('Entrega final',"selected_features_75.txt"), row.names = FALSE, col.names = FALSE)
+
+# --/--/ Fishers de las características seleccionadas
+t75 <- p75$fish
+
+# --/--/ Grfico de los factores de Fisher en t75
+g4 <- ggplot(data = data.frame(fish = t75), aes(x = 1:length(t75), y = t75)) +
+	geom_line(color = "skyblue") +
+	labs(title = "Factores de Fisher en la selección de características 75%", x = "Iteración", y = "Factor de Fisher")
+
+# --/--/ Guardamos el gráfico anterior
+ggsave("fisher_factors_selection_75.png", plot = g4, path = here("plots", "seleccion"), 
+	   width=10, height=8, units="in")
+
+# ---------------------------------------------------------------------
+
+# 5.  Aprendizaje de clasificadores:  Aplicando K-fold cross validation con K=5
+
+# --/ Convertir la columna de la clase de la siguiente forma:
+#      1: Insufficient Weight
+#      2: Normal Weight
+#      3: Overweight Level I y Overweight Level II
+#      4: Obesity Type I, Obesity Type II y Obesity Type III
+
+dataset_clf <- dataset_norm
+
+# --/--/ Imprimir la cantidad de registros por clase
+cat("Cantidad de registros por clase:\n")
+table(dataset_clf[, class_column])
+
+# --/ Mapear los valores de la columna clase a los valores indicados
+dataset_clf[, class_column] <- sapply(dataset_clf[, class_column], function(x) {
+	if (x == "Insufficient_Weight") {
+		return(1)
+	} else if (x == "Normal_Weight") {
+		return(2)
+	} else if (x == "Overweight_Level_I" || x == "Overweight_Level_II") {
+		return(3)
+	} else {
+		return(4)
+	}
+})
+
+# --/--/ Imprimir la cantidad de registros por clase
+cat("Cantidad de registros por clase:\n")
+table(dataset_clf[, class_column])
+
+
+# --/ Clasificador de árbol de decisión utilizando todas las características
+NObeyesdad <- dataset_clf$NObeyesdad
+model.classification <- rpart(NObeyesdad ~ ., data = dataset_clf, method = "class", control = rpart.control(minsplit = 1, cp = 0.01))
+
+# --/--/ Graficar el árbol de decisión
+rpart.plot(model.classification, extra = 1, box.palette= "GnYlRd" ,type = 5, fallen.leaves = TRUE, 
+            under = TRUE, faclen = 4, cex = 1, split.cex = 1, split.prefix = " ", cex.main=1.5,
+            main="Árbol de decisión con todas las características", branch.lty = 3, under.cex=1)
+
+nombres_caracteristicas <- model.classification$frame$var
+nombres_caracteristicas <- nombres_caracteristicas[nombres_caracteristicas != "<leaf>"]
+
+# Imprimimos los valores unicos de nombres_caracteristicas
+print(unique(nombres_caracteristicas))
+
+all_features <- unique(nombres_caracteristicas)
+
+# Guardamos las características seleccionadas en un archivo txt
+write.table(all_features, file = here('Entrega final',"all_features.txt"), row.names = FALSE, col.names = FALSE)
+
+
+# --/ Clasificador KNN utilizando cross validation con K=5
+
+# --/--/ Dividir el dataset en 5 partes
+set.seed(215)
+
+# --/--/ Shuffle de las filas
+dataset_clf <- dataset_clf[sample(nrow(dataset_clf)), ]
+
+# --/--/ k-fold cross validation
+k <- 5
+folds <- cut(seq(1, nrow(dataset_clf)), breaks = k, labels = FALSE)
+
+# --/--/ Lista para guardar los resultados
+results <- list()
+
+# --/--/ Por cada fold, obtener Exactitud, precision, recall y f-score por clase
+# --/--/ Para todos los folds, desempeño promedio y desviación estándar de Exactitud, precision, recall y f-score
+for (i in 1:k) {
+	# --/--/ Dividir el dataset en entrenamiento y prueba
+	train <- dataset_clf[folds != i, ]
+	test <- dataset_clf[folds == i, ]
+
+	# --/--/ Clasificador KNN
+	model <- knn(train = train[, -class_column], test = test[, -class_column], cl
+		= train[, class_column], k = 5)
+
+	# --/--/ Matriz de confusión
+	confusionMatrix <- table(test[, class_column], model)
+
+	# --/--/ Exactitud
+	accuracy <- sum(diag(confusionMatrix)) / sum(confusionMatrix)
+	
+	# --/--/ Por cada clase (1, 2, 3, 4), precision, recall y f-score
+	precision <- c()
+	recall <- c()
+	f_score <- c()
+
+	for (j in 1:4) {
+		# --/--/ Precision
+		precision <- c(precision, confusionMatrix[j, j] / sum(confusionMatrix[, j]))
+
+		# --/--/ Recall
+		recall <- c(recall, confusionMatrix[j, j] / sum(confusionMatrix[j, ]))
+
+		# --/--/ F-score
+		f_score <- c(f_score, 2 * precision[j] * recall[j] / (precision[j] + recall[j]))
+	}
+
+	# --/--/ Guardar resultados
+	results[[i]] <- list(accuracy = accuracy, precision = precision, recall = recall, f_score = f_score)
+
+	# --/--/ Imprimir resultados
+	cat("Fold ", i, "\n")
+	cat("Exactitud: ", accuracy, "\n")
+	cat("Precision: ", precision, "\n")
+	cat("Recall: ", recall, "\n")
+	cat("F-score: ", f_score, "\n")
+}
+
+# --/--/ Desempeño promedio y desviación estándar de Exactitud, precision, recall y f-score
+accuracy <- sapply(results, function(x) x$accuracy)
+accuracy_mean <- mean(accuracy)
+accuracy_sd <- sd(accuracy)
+
+cat("Exactitud promedio: ", accuracy_mean, "\n")
+cat("Exactitud desviación estándar: ", accuracy_sd, "\n")
+
+# --/--/ Precision por clase
+precision <- sapply(results, function(x) x$precision)
+precision_mean <- apply(precision, 1, mean)
+precision_sd <- apply(precision, 1, sd)
+
+cat("Precision promedio por clase: ", precision_mean, "\n")
+cat("Precision desviación estándar por clase: ", precision_sd, "\n")
+
+# --/--/ Recall por clase
+recall <- sapply(results, function(x) x$recall)
+recall_mean <- apply(recall, 1, mean)
+recall_sd <- apply(recall, 1, sd)
+
+cat("Recall promedio por clase: ", recall_mean, "\n")
+cat("Recall desviación estándar por clase: ", recall_sd, "\n")
+
+# --/--/ F-score por clase
+f_score <- sapply(results, function(x) x$f_score)
+f_score_mean <- apply(f_score, 1, mean)
+f_score_sd <- apply(f_score, 1, sd)
+
+cat("F-score promedio por clase: ", f_score_mean, "\n")
+cat("F-score desviación estándar por clase: ", f_score_sd, "\n")
