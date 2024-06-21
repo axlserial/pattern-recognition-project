@@ -1,8 +1,0 @@
-"Weight"
-"FCVC"
-"Gender"
-"family_history_with_overweight"
-"Age"
-"CALC"
-"CAEC"
-"NCP"

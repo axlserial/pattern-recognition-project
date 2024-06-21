@@ -345,6 +345,7 @@ write.table(all_features, file = here('Entrega final',"all_features.txt"), row.n
 
 # --/ Clasificador KNN utilizando cross validation con K=5
 
+# --/ Todas las caracteristicas
 # --/--/ Dividir el dataset en 5 partes
 set.seed(215)
 
